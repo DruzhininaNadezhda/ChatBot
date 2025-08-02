@@ -29,7 +29,7 @@
         #messages {
             flex: 1;
             overflow-y: auto;
-            padding: 20px;
+            padding: 5px 5px 5px 5px;
         }
 
         .message {
@@ -45,6 +45,8 @@
             background: #007bff;
             color: white;
             border-bottom-right-radius: 0;
+            margin-left: auto;
+            margin-right: 0;
         }
 
         .bot {
@@ -52,6 +54,8 @@
             background: #f1f1f1;
             color: #333;
             border-bottom-left-radius: 0;
+            margin-left: 0;
+            margin-right: auto;
         }
 
         #input-form {
@@ -59,6 +63,34 @@
             flex-direction: column;
             padding: 15px;
             border-top: 1px solid #ddd;
+        }
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .input-row input[type="text"] {
+            flex: 1;
+            padding: 10px 15px;
+            border-radius: 20px;
+            border: 1px solid #ccc;
+            outline: none;
+        }
+
+        .input-row button {
+            padding: 10px 20px;
+            border: none;
+            background: #007bff;
+            color: white;
+            border-radius: 20px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .input-row button:hover {
+            background: #0056b3;
         }
 
         #user-input, #file-input {
@@ -81,6 +113,37 @@
         button:hover {
             background: #0056b3;
         }
+        @media (max-width: 768px) {
+            #chat-container {
+                width: 100vw;
+                height: 100vh;
+                max-width: none;
+                border-radius: 0;
+                box-shadow: none;
+            }
+
+            #messages {
+                padding: 10px;
+            }
+
+            #input-form {
+                padding: 10px;
+            }
+
+            #user-input {
+                font-size: 18px;
+                padding: 12px;
+            }
+
+            #file-input {
+                font-size: 16px;
+            }
+
+            button, #send-button {
+                font-size: 22px;
+                padding: 12px 18px;
+            }
+        }
     </style>
 </head>
 
@@ -90,9 +153,11 @@
     <div id="messages"></div>
 
     <form id="input-form" enctype="multipart/form-data">
-        <input type="text" id="user-input" placeholder="Напиши что-нибудь..." />
+        <div class="input-row">
+            <input type="text" id="user-input" placeholder="Напиши что-нибудь..." />
+            <button type="submit">Ответить</button>
+        </div>
         <input type="file" id="file-input" />
-        <button type="submit">Отправить</button>
     </form>
 </div>
 
@@ -114,11 +179,11 @@
     const newButton = document.createElement("button");
     newButton.textContent = "Новая заявка (удаляет текущую)";
     newButton.type = "button";
-    newButton.style.margin = "20px auto";
+    newButton.style.margin = "0 auto 8px";
     newButton.style.display = "block";
     newButton.style.padding = "10px 20px";
     newButton.style.border = "none";
-    newButton.style.background = "#007bff";
+    newButton.style.background = "#ff5900";
     newButton.style.color = "white";
     newButton.style.borderRadius = "20px";
     newButton.style.cursor = "pointer";
@@ -128,7 +193,7 @@
         localStorage.setItem("applicationId", applicationId);
 
         appendMessage("🆕 Новая заявка создана: " + applicationId, "bot");
-        appendMessage("Пожалуйста, введите ваше имя:", "bot");
+        appendMessage("Пожалуйста, введите вашу фамилию и имя:", "bot");
         awaitingUsername = true;
 
         await fetch("/clear-dto", {
@@ -214,7 +279,7 @@
             });
 
             appendMessage("Имя сохранено!", "bot");
-            appendMessage("Теперь, пожалуйста, укажите:<br>" +
+            appendMessage("Теперь, укажите в удобно формате (можно просто через запятую без слов уточнений):<br>" +
                 "– Получателя (наименование поставщика и ИНН, если поставщик новый)<br>" +
                 "– Статью ДДС<br>" +
                 "– Контактное лицо (имя, телефон, почта)<br>" +
