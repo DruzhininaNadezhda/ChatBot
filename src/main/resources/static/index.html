@@ -218,13 +218,13 @@
                     // уберём токен из адресной строки, чтобы не повторялось при перезагрузке
                     history.replaceState(null, "", location.pathname);
                     b24Token = null;
-                    appendMessage("Теперь, укажите в удобно формате (можно просто через запятую без слов уточнений):<br>" +
-                        "– Получателя (наименование поставщика и ИНН, если поставщик новый)<br>" +
-                        "– Статью ДДС<br>" +
-                        "– Контактное лицо (имя, телефон, почта)<br>" +
-                        "– Дату платежа<br>" +
-                        "– Дату поступления (при предоплате или услугах)<br>" +
-                        "– Приложите файл", "bot");
+                    // appendMessage("Теперь, укажите в удобно формате (можно просто через запятую без слов уточнений):<br>" +
+                    //     "– Получателя (наименование поставщика и ИНН, если поставщик новый)<br>" +
+                    //     "– Статью ДДС<br>" +
+                    //     "– Контактное лицо (имя, телефон, почта)<br>" +
+                    //     "– Дату платежа<br>" +
+                    //     "– Дату поступления (при предоплате или услугах)<br>" +
+                    //     "– Приложите файл", "bot");
                 } else {
                     appendMessage("⚠ Не удалось подтянуть данные из Битрикс. Введите имя вручную.", "bot");
                     appendMessage("Пожалуйста, введите вашу фамилию и имя:", "bot");
@@ -316,6 +316,7 @@
             const data = await res.json();
 
             appendMessage(data.message, "bot");
+            if (data.attachment) renderAttachment(data.attachment);
             if (data.attachment && data.attachment.originalFileName) {
                 appendMessage("📎 Найдён файл: " + data.attachment.originalFileName, "bot");
             }
@@ -547,6 +548,38 @@
         div.appendChild(btn);
         messages.appendChild(div);
         messages.scrollTop = messages.scrollHeight;
+    }
+    function renderAttachment(att) {
+        // att: { name, mimeType, size, url }
+        const div = document.createElement('div');
+        div.classList.add('message', 'bot');
+
+        const a = document.createElement('a');
+        a.href = att.url;                 // отдаёт /mail/attachment/{token}
+        a.textContent = `📎 ${att.name || 'Вложение'} (${prettySize(att.size)})`;
+        a.target = "_blank";
+        a.download = att.name || '';      // подсказываем имя при скачивании
+
+        // опционально – отдельная кнопка "Скачать"
+        const btn = document.createElement('a');
+        btn.href = att.url;
+        btn.textContent = 'Скачать';
+        btn.target = '_blank';
+        btn.download = att.name || '';
+        btn.style.marginLeft = '8px';
+
+        div.appendChild(a);
+        div.appendChild(btn);
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+    }
+
+    function prettySize(bytes) {
+        if (bytes == null) return '—';
+        const units = ['Б', 'КБ', 'МБ', 'ГБ', 'ТБ'];
+        let i = 0, n = Number(bytes);
+        while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+        return `${n.toFixed(n < 10 && i > 0 ? 1 : 0)} ${units[i]}`;
     }
 
     async function updateSendButtonState() {
