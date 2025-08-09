@@ -19,6 +19,7 @@ public class ApplicationDTO implements Serializable {
     private String username;
     private String userEmail;
     private String bitrixUserId;
+    private String gigaFileId;
     private List<String> comments = new ArrayList<>();
     private String applicationId;
     @JsonProperty(value = "статья_ддс")

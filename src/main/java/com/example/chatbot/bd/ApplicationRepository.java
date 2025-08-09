@@ -10,7 +10,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ApplicationRepository {
 
     private final Map<String, ApplicationDTO> active = new ConcurrentHashMap<>();
-    private final Map<String, ApplicationDTO> finished = new ConcurrentHashMap<>();
 
     public ApplicationDTO getOrCreate(String applicationId) {
         return active.computeIfAbsent(applicationId, ApplicationDTO::new);
@@ -49,10 +48,9 @@ public class ApplicationRepository {
                 dto.getFile() != null;
     }
 
-    public boolean finalizeApplication(String applicationId) {
+    public boolean delete(String applicationId) {
         ApplicationDTO dto = active.remove(applicationId);
         if (dto == null) return false;
-        finished.put(applicationId, dto);
         return true;
     }
 

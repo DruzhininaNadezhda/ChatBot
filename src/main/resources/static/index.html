@@ -245,55 +245,91 @@
     };
 
     const chatContainer = document.getElementById("chat-container");
-    // 📧 Поле ввода email для проверки входящих
-    const emailInputRow = document.createElement("div");
-    emailInputRow.className = "input-row";
-    emailInputRow.style.margin = "10px";
+    // // 📧 Поле ввода email для проверки входящих
+    // const emailInputRow = document.createElement("div");
+    // emailInputRow.className = "input-row";
+    // emailInputRow.style.margin = "10px";
+    //
+    // const emailInput = document.createElement("input");
+    // emailInput.type = "text";
+    // emailInput.placeholder = "Введите email для проверки входящих";
+    // emailInput.id = "check-email-input";
+    // emailInput.style.flex = "1";
+    // emailInput.style.padding = "10px";
+    // emailInput.style.borderRadius = "20px";
+    // emailInput.style.border = "1px solid #ccc";
+    //
+    // const checkEmailButton = document.createElement("button");
+    // checkEmailButton.textContent = "Проверить почту";
+    // checkEmailButton.type = "button";
+    // checkEmailButton.style.whiteSpace = "nowrap";
+    //
+    // checkEmailButton.onclick = async () => {
+    //     const emailToCheck = emailInput.value.trim();
+    //     if (!emailToCheck) {
+    //         appendMessage("⚠ Введите email отправителя", "bot");
+    //         return;
+    //     }
+    //
+    //     try {
+    //         const res = await fetch("/check-inbox?" + new URLSearchParams({
+    //             senderEmail: emailToCheck
+    //         }), {
+    //             method: "POST"
+    //         });
+    //
+    //         if (res.ok) {
+    //             appendMessage("🔎 Поиск писем от " + emailToCheck + " запущен. Смотри консоль сервера.", "bot");
+    //         } else {
+    //             appendMessage("⚠ Ошибка при обращении к серверу", "bot");
+    //         }
+    //     } catch (e) {
+    //         appendMessage("⚠ Ошибка запроса: " + e.message, "bot");
+    //     }
+    // };
+    //
+    // emailInputRow.appendChild(emailInput);
+    // emailInputRow.appendChild(checkEmailButton);
+    const checkMailButton = document.createElement("button");
+    checkMailButton.textContent = "Проверить почту";
+    checkMailButton.type = "button";
+    checkMailButton.style.margin = "0 auto 8px";
+    checkMailButton.style.display = "block";
+    checkMailButton.style.padding = "10px 20px";
+    checkMailButton.style.border = "none";
+    checkMailButton.style.background = "#0cab5e";
+    checkMailButton.style.color = "white";
+    checkMailButton.style.borderRadius = "20px";
+    checkMailButton.style.cursor = "pointer";
 
-    const emailInput = document.createElement("input");
-    emailInput.type = "text";
-    emailInput.placeholder = "Введите email для проверки входящих";
-    emailInput.id = "check-email-input";
-    emailInput.style.flex = "1";
-    emailInput.style.padding = "10px";
-    emailInput.style.borderRadius = "20px";
-    emailInput.style.border = "1px solid #ccc";
-
-    const checkEmailButton = document.createElement("button");
-    checkEmailButton.textContent = "Проверить почту";
-    checkEmailButton.type = "button";
-    checkEmailButton.style.whiteSpace = "nowrap";
-
-    checkEmailButton.onclick = async () => {
-        const emailToCheck = emailInput.value.trim();
-        if (!emailToCheck) {
-            appendMessage("⚠ Введите email отправителя", "bot");
+    checkMailButton.onclick = async () => {
+        if (!applicationId) {
+            appendMessage("❗ Сначала нажмите 'Новая заявка'", "bot");
             return;
         }
-
         try {
-            const res = await fetch("/check-inbox?" + new URLSearchParams({
-                senderEmail: emailToCheck
-            }), {
-                method: "POST"
+            const res = await fetch("/mail/check", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams({ applicationId })
             });
+            const data = await res.json();
 
-            if (res.ok) {
-                appendMessage("🔎 Поиск писем от " + emailToCheck + " запущен. Смотри консоль сервера.", "bot");
-            } else {
-                appendMessage("⚠ Ошибка при обращении к серверу", "bot");
+            appendMessage(data.message, "bot");
+            if (data.attachment && data.attachment.originalFileName) {
+                appendMessage("📎 Найдён файл: " + data.attachment.originalFileName, "bot");
             }
+
+            await showDtoSummary();
+            updateSendButtonState();
         } catch (e) {
-            appendMessage("⚠ Ошибка запроса: " + e.message, "bot");
+            appendMessage("⚠ Ошибка при проверке почты: " + e.message, "bot");
         }
     };
 
-    emailInputRow.appendChild(emailInput);
-    emailInputRow.appendChild(checkEmailButton);
-
-    // ⬇️ ВСТАВЛЯЕМ ВОТ ЗДЕСЬ
-    chatContainer.insertBefore(emailInputRow, chatContainer.firstChild);
+    chatContainer.insertBefore(checkMailButton, chatContainer.firstChild);
     chatContainer.insertBefore(newButton, chatContainer.firstChild);
+
 
     // Кнопка "Отправить заявку в бухгалтерию"
     const sendButton = document.createElement("button");

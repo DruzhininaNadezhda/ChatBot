@@ -1,9 +1,10 @@
 package com.example.chatbot.service;
 
-import com.example.chatbot.dto.ApplicationDTO;
+import com.example.chatbot.components.AttachmentRegistry;
+import com.example.chatbot.dto.AttachmentView;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.client.RestTemplate;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -15,15 +16,25 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
-import java.util.Map;
+import java.util.List;
 import java.util.UUID;
+import java.io.File;
+import java.nio.file.Files;
 
 @Service
 @Validated
+@RequiredArgsConstructor
 public class GigaChatClientService {
+    private final AttachmentRegistry registry;
+    private static final String API_URL = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth";
+    private static final String YOUR_API_KEY = "ZDQ4ZTc1YzMtMDUwNi00ZDc1LTlmNWYtYzg1NzNlOTQyYjNjOmM4MDFlNzc4LWZiMjMtNGYxZi04ODQ2LTY0Y2JiNTE5ZDA1NA==";
 
-    private static final String API_URL = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"; // подставьте правильный адрес API
-    private static final String YOUR_API_KEY = "ZDQ4ZTc1YzMtMDUwNi00ZDc1LTlmNWYtYzg1NzNlOTQyYjNjOmM4MDFlNzc4LWZiMjMtNGYxZi04ODQ2LTY0Y2JiNTE5ZDA1NA=="; // вставьте сюда полученный токен
+    // ========== НОВОЕ: анализ локального файла тем же путём, что и при ручной загрузке ==========
+    /**
+     * Заливает локальный файл в GigaChat и делает chat completion с вложением.
+     * Возвращает сырой JSON-ответ GigaChat (строка), чтобы потом отдать в парсер.
+     */
+
     public String sendPrompt(String pr) throws Exception {
         String prompt = "Ты помощник бухгалтерии, который должен собрать данные для формирования заявки на оплату. Используй только данные пользователя, не добавляй ничего от себя." +
                 "В запросе пользователя (входных данных) будут указаны следующие данные: " +
@@ -43,11 +54,11 @@ public class GigaChatClientService {
                 "\"дата_поступления\": \"(данные)\"" +
                 "\"прочая информация\": \"(данные)\"" +
                 "}"+pr;
-        // Шаг 1: получить access_token
+
         String tokenJson = generateToken();
         String accessToken = extractAccessToken(tokenJson);
         String safePrompt = escapeForJson(prompt);
-        // Шаг 2: тело запроса
+
         String requestBody = """
         {
           "model": "GigaChat:latest",
@@ -74,10 +85,7 @@ public class GigaChatClientService {
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
 
-        HttpClient client = HttpClient.newBuilder()
-                .sslContext(createInsecureSslContext())
-                .build();
-
+        HttpClient client = http();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() >= 200 && response.statusCode() <= 299) {
             return response.body();
@@ -85,39 +93,37 @@ public class GigaChatClientService {
             throw new IOException("Ошибка запроса: " + response.statusCode() + ". Ответ сервера: " + response.body());
         }
     }
+
     public String generateToken() throws Exception {
         UUID uuid = UUID.randomUUID();
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(API_URL))                     // адрес API
+                .uri(URI.create(API_URL))
                 .header("Content-Type", "application/x-www-form-urlencoded")
-                .header("Accept", "application/json")   // контент типа JSON
+                .header("Accept", "application/json")
                 .header("RqUID", uuid.toString())
-                .header("Authorization","Basic "+ YOUR_API_KEY) // добавляем токен
-                .POST(HttpRequest.BodyPublishers.ofString("scope=GIGACHAT_API_PERS")) // тело запроса
+                .header("Authorization","Basic "+ YOUR_API_KEY)
+                .POST(HttpRequest.BodyPublishers.ofString("scope=GIGACHAT_API_PERS"))
                 .build();
 
-        HttpClient client = HttpClient.newBuilder()
-                .sslContext(createInsecureSslContext())
-                .build();
+        HttpClient client = http();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         int statusCode = response.statusCode();
-        if (statusCode >= 200 && statusCode <= 299) { // успешный статус ответа
-            return response.body(); // возвращаем строку с ответом
+        if (statusCode >= 200 && statusCode <= 299) {
+            return response.body();
         } else {
             throw new IOException("Ошибка запроса: " + statusCode + ". Ответ сервера: " + response.body());
         }
     }
+
     private String extractAccessToken(String json) {
-        // Предположим, что в JSON есть строка: "access_token":"..."
         int start = json.indexOf("\"access_token\":\"");
         if (start == -1) return null;
-
         start += "\"access_token\":\"".length();
         int end = json.indexOf("\"", start);
         if (end == -1) return null;
-
         return json.substring(start, end);
     }
+
     private String escapeForJson(String text) {
         return text
                 .replace("\\", "\\\\")
@@ -126,6 +132,7 @@ public class GigaChatClientService {
                 .replace("\r", "")
                 .replace("\t", "\\t");
     }
+
     private SSLContext createInsecureSslContext() throws Exception {
         TrustManager[] trustAllCerts = new TrustManager[]{
                 new X509TrustManager() {
@@ -134,12 +141,12 @@ public class GigaChatClientService {
                     public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
                 }
         };
-
         SSLContext sc = SSLContext.getInstance("TLS");
         sc.init(null, trustAllCerts, new SecureRandom());
         return sc;
     }
-    public String enrichWithGigaChat(ApplicationDTO dto, String userInput) throws Exception {
+
+    public String enrichWithGigaChat(com.example.chatbot.dto.ApplicationDTO dto, String userInput) throws Exception {
         StringBuilder sb = new StringBuilder();
         sb.append("Номер заявки: ").append(dto.getApplicationId()).append("\n");
         if (dto.getDds() != null) sb.append("ДДС: ").append(dto.getDds()).append("\n");
@@ -149,8 +156,159 @@ public class GigaChatClientService {
         if (dto.getDeliveryDate() != null) sb.append("Дата поступления: ").append(dto.getDeliveryDate()).append("\n");
 
         String fullPrompt = "Вот текущая заявка: " + sb + "Пользователь ввёл: " + userInput;
-
         return sendPrompt(fullPrompt);
     }
-}
 
+    public String uploadFileToGiga(File file, String mime) throws Exception {
+        System.out.println("[uploadFileToGiga] Старт загрузки файла: " + file.getAbsolutePath());
+
+        String accessToken = extractAccessToken(generateToken());
+        String boundary = "----gc-" + java.util.UUID.randomUUID();
+        String filename = file.getName();
+        if (mime == null || mime.isBlank()) mime = guessMime(filename);
+
+        byte[] pre = (
+                "--" + boundary + "\r\n" +
+                        "Content-Disposition: form-data; name=\"file\"; filename=\"" + filename.replace("\"", "%22") + "\"\r\n" +
+                        "Content-Type: " + mime + "\r\n\r\n"
+        ).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+
+        byte[] post = (
+                "\r\n--" + boundary + "\r\n" +
+                        "Content-Disposition: form-data; name=\"purpose\"\r\n\r\n" +
+                        "general\r\n" +
+                        "--" + boundary + "--\r\n"
+        ).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+
+        byte[] fileBytes = java.nio.file.Files.readAllBytes(file.toPath());
+        byte[] body = java.nio.ByteBuffer
+                .allocate(pre.length + fileBytes.length + post.length)
+                .put(pre).put(fileBytes).put(post).array();
+
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create("https://gigachat.devices.sberbank.ru/api/v1/files"))
+                .header("Authorization", "Bearer " + accessToken)
+                .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                .POST(HttpRequest.BodyPublishers.ofByteArray(body))
+                .build();
+
+        HttpResponse<String> resp = http().send(req, HttpResponse.BodyHandlers.ofString());
+        if (resp.statusCode() / 100 != 2) {
+            throw new IOException("Upload failed: " + resp.statusCode() + " " + resp.body());
+        }
+
+        String json = resp.body();
+        int i = json.indexOf("\"id\":\"");
+        if (i < 0) throw new IOException("No file id in response: " + json);
+        int s = i + 6, e = json.indexOf('"', s);
+        String fileId = json.substring(s, e);
+        return fileId;
+    }
+
+    public String sendPromptWithAttachment(String prompt, String fileId) throws Exception {
+        String accessToken = extractAccessToken(generateToken());
+        String body = """
+        {
+          "model": "GigaChat-2-Max",
+          "function_call": "auto",
+          "messages": [
+            {
+              "role": "user",
+              "content": "%s",
+              "attachments": ["%s"]
+            }
+          ],
+          "stream": false
+        }
+        """.formatted(escapeForJson(prompt), fileId);
+
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create("https://gigachat.devices.sberbank.ru/api/v1/chat/completions"))
+                .header("Authorization", "Bearer " + accessToken)
+                .header("Content-Type", "application/json")
+                .header("Accept", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .build();
+
+        HttpResponse<String> resp = http().send(req, HttpResponse.BodyHandlers.ofString());
+        if (resp.statusCode() / 100 != 2) {
+            throw new IOException("Chat failed: " + resp.statusCode() + " " + resp.body());
+        }
+        return resp.body();
+    }
+
+    public void processWithGigaChatSilently(List<AttachmentView> attachments) {
+        if (attachments == null || attachments.isEmpty()) return;
+
+        for (AttachmentView att : attachments) {
+            try {
+                String url = att.getUrl();
+                String token = url.substring(url.lastIndexOf('/') + 1);
+
+                AttachmentRegistry.Item item = registry.get(token);
+                if (item == null || item.file == null || !item.file.exists()) {
+                    System.err.println("[/check-inbox][AI][" + att.getName() + "] файл не найден/протух по токену: " + token);
+                    continue;
+                }
+
+                String fileId = uploadFileToGiga(item.file, item.mimeType);
+                String prompt =
+                        "Проанализируй приложенный документ и верни JSON с ключами: " +
+                                "статья_ддс, получатель, контактное_лицо, дата_платежа, дата_поступления, прочая информация. " +
+                                "Ответ ТОЛЬКО JSON.";
+
+                String raw = sendPromptWithAttachment(prompt, fileId);
+                System.out.println("[/check-inbox][AI][" + att.getName() + "] RAW RESPONSE:\n" + raw);
+
+            } catch (Exception ex) {
+                System.err.println("[/check-inbox][AI][" + att.getName() + "] Ошибка: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+        }
+    }
+
+    public boolean deleteFileFromGiga(String fileId) throws Exception {
+        String accessToken = extractAccessToken(generateToken());
+
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create("https://gigachat.devices.sberbank.ru/api/v1/files/" + fileId))
+                .header("Authorization", "Bearer " + accessToken)
+                .DELETE()
+                .build();
+
+        HttpResponse<String> resp = http().send(req, HttpResponse.BodyHandlers.ofString());
+        return resp.statusCode() / 100 == 2;
+    }
+
+    private HttpClient http() throws Exception {
+        return HttpClient.newBuilder()
+                .sslContext(createInsecureSslContext())
+                .build();
+    }
+
+    /** Анализ уже-локального файла: заливаем → делаем chat completion с вложением → возвращаем сырой ответ. */
+    public String analyzeAttachment(String localPath) throws Exception {
+        File file = new File(localPath);
+        if (!file.isFile()) throw new IllegalArgumentException("Файл не найден: " + localPath);
+        String mime = guessMime(file.getName());
+        String fileId = uploadFileToGiga(file, mime);
+        String prompt = "Проанализируй приложенный документ и верни JSON с ключами: " +
+                "статья_ддс, получатель, контактное_лицо, дата_платежа, дата_поступления, прочая информация. " +
+                "Ответ ТОЛЬКО JSON.";
+        return sendPromptWithAttachment(prompt, fileId);
+    }
+
+    /** Определение MIME по расширению (используется, если probeContentType ничего не дал). */
+    public static String guessMime(String name) {
+        String n = name.toLowerCase();
+        if (n.endsWith(".pdf"))  return "application/pdf";
+        if (n.endsWith(".png"))  return "image/png";
+        if (n.endsWith(".jpg") || n.endsWith(".jpeg")) return "image/jpeg";
+        if (n.endsWith(".docx")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        if (n.endsWith(".doc"))  return "application/msword";
+        if (n.endsWith(".xlsx")) return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        if (n.endsWith(".xls"))  return "application/vnd.ms-excel";
+        return "application/octet-stream";
+    }
+
+}

@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.example.chatbot.dto.AttachmentView;
 
 import java.io.File;
 import java.util.List;
@@ -22,12 +23,10 @@ import java.util.Map;
 public class BotController {
 
     private final GigaChatClientService gigaChatClient;
-    private final EmailIn emailIn;
     private final JsonParserService parserService;
     private final FileAttachService fileAttachService;
     private final ApplicationRepository applicationRepository;
-    private final EmailService emailService;
-    private final EmailOut emailOut;
+
 
     @PostMapping("/process")
     public String handleUserInput(
@@ -78,31 +77,6 @@ public class BotController {
         return applicationRepository.isReady(applicationId) ? "OK" : "NO";
     }
 
-    @PostMapping("/finalize")
-    public ResponseEntity<String> finalizeDto(@RequestParam String applicationId) {
-        ApplicationDTO dto = applicationRepository.get(applicationId);
-        if (dto == null) {
-            return ResponseEntity.status(404).body("Не найдена заявка");
-        }
-
-        try {
-            // 1. Формируем тело письма
-            String emailBody = emailService.buildEmailText(dto);
-
-            // 2. Отправляем письмо с файлом и телом
-            emailOut.sendEmail(dto, emailBody);
-
-            // 3. Финализируем заявку
-            boolean success = applicationRepository.finalizeApplication(applicationId);
-            return success
-                    ? ResponseEntity.ok("Заявка передана и письмо отправлено:\n\n" + emailBody)
-                    : ResponseEntity.status(404).body("Не найдена заявка");
-
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(400).body("⚠ Не удалось отправить письмо: " + e.getMessage());
-        }
-    }
-
     @PostMapping("/set-username")
     public ResponseEntity<Void> setUsername(@RequestParam String applicationId,
                                             @RequestParam String username) {
@@ -115,16 +89,6 @@ public class BotController {
             @RequestParam String comment) {
         applicationRepository.addComment(applicationId, comment);
         return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/check-inbox")
-    public ResponseEntity<String> checkInboxFromUser(@RequestParam String senderEmail) {
-        try {
-            emailIn.extractAndForwardAttachment(senderEmail);
-            return ResponseEntity.ok("Вложение от " + senderEmail + " переслано.");
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body("Ошибка: " + e.getMessage());
-        }
     }
 
     // POST /set-user-email
