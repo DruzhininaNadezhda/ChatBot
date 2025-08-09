@@ -16,9 +16,11 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class ApplicationDTO implements Serializable {
+    private String username;
+    private String userEmail;
+    private String bitrixUserId;
     private List<String> comments = new ArrayList<>();
     private String applicationId;
-    private String username;
     @JsonProperty(value = "статья_ддс")
     private String dds;
     @JsonProperty(value = "получатель")

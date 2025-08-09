@@ -163,6 +163,10 @@
 </div>
 
 <script>
+    // === B24 AUTO START ===
+    const urlParams = new URLSearchParams(location.search);
+    let b24Token = urlParams.get('b24'); // если пришли из Битрикса, тут будет короткий JWT
+    // === /B24 AUTO START ===
     const form = document.getElementById('input-form');
     const input = document.getElementById('user-input');
     const fileInput = document.getElementById('file-input');
@@ -190,26 +194,105 @@
     newButton.style.cursor = "pointer";
 
     newButton.onclick = async () => {
+        // создаём новый applicationId (чистый DTO)
         applicationId = crypto.randomUUID();
         localStorage.setItem("applicationId", applicationId);
 
         appendMessage("🆕 Новая заявка создана: " + applicationId, "bot");
-        appendMessage("Пожалуйста, введите вашу фамилию и имя:", "bot");
-        awaitingUsername = true;
 
-        await fetch("/clear-dto", {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: new URLSearchParams({
-                chatId: chatId,
-                applicationId: applicationId
-            })
-        });
+        // если мы пришли из Битрикса — сразу заполняем DTO на бэке
+        if (b24Token) {
+            try {
+                const r = await fetch("/b24/new?" + new URLSearchParams({
+                    applicationId, b24: b24Token
+                }), { method: "POST" });
+
+                if (r.ok) {
+                    // показываем дружелюбное подтверждение
+                    // подтянем свежие данные, чтобы отобразить имя и почту
+                    const head = await (await fetch('/dto-head?applicationId=' + encodeURIComponent(applicationId))).json();
+                    const name = (head.username || "—").trim();
+                    const mail = (head.userEmail || "—").trim();
+                    appendMessage(`Привет! Похоже, вы ${name}, а ваша почта — ${mail}.`, "bot");
+                    awaitingUsername = !name; // если имени нет — всё ещё попросим его дальше
+                    // уберём токен из адресной строки, чтобы не повторялось при перезагрузке
+                    history.replaceState(null, "", location.pathname);
+                    b24Token = null;
+                    appendMessage("Теперь, укажите в удобно формате (можно просто через запятую без слов уточнений):<br>" +
+                        "– Получателя (наименование поставщика и ИНН, если поставщик новый)<br>" +
+                        "– Статью ДДС<br>" +
+                        "– Контактное лицо (имя, телефон, почта)<br>" +
+                        "– Дату платежа<br>" +
+                        "– Дату поступления (при предоплате или услугах)<br>" +
+                        "– Приложите файл", "bot");
+                } else {
+                    appendMessage("⚠ Не удалось подтянуть данные из Битрикс. Введите имя вручную.", "bot");
+                    appendMessage("Пожалуйста, введите вашу фамилию и имя:", "bot");
+                    awaitingUsername = true;
+                }
+            } catch {
+                appendMessage("⚠ Ошибка сети. Введите имя вручную.", "bot");
+                appendMessage("Пожалуйста, введите вашу фамилию и имя:", "bot");
+                awaitingUsername = true;
+            }
+        } else {
+            // обычный сценарий (прямая ссылка без Битрикса)
+            appendMessage("Пожалуйста, введите вашу фамилию и имя:", "bot");
+            awaitingUsername = true;
+        }
 
         updateSendButtonState();
     };
 
     const chatContainer = document.getElementById("chat-container");
+    // 📧 Поле ввода email для проверки входящих
+    const emailInputRow = document.createElement("div");
+    emailInputRow.className = "input-row";
+    emailInputRow.style.margin = "10px";
+
+    const emailInput = document.createElement("input");
+    emailInput.type = "text";
+    emailInput.placeholder = "Введите email для проверки входящих";
+    emailInput.id = "check-email-input";
+    emailInput.style.flex = "1";
+    emailInput.style.padding = "10px";
+    emailInput.style.borderRadius = "20px";
+    emailInput.style.border = "1px solid #ccc";
+
+    const checkEmailButton = document.createElement("button");
+    checkEmailButton.textContent = "Проверить почту";
+    checkEmailButton.type = "button";
+    checkEmailButton.style.whiteSpace = "nowrap";
+
+    checkEmailButton.onclick = async () => {
+        const emailToCheck = emailInput.value.trim();
+        if (!emailToCheck) {
+            appendMessage("⚠ Введите email отправителя", "bot");
+            return;
+        }
+
+        try {
+            const res = await fetch("/check-inbox?" + new URLSearchParams({
+                senderEmail: emailToCheck
+            }), {
+                method: "POST"
+            });
+
+            if (res.ok) {
+                appendMessage("🔎 Поиск писем от " + emailToCheck + " запущен. Смотри консоль сервера.", "bot");
+            } else {
+                appendMessage("⚠ Ошибка при обращении к серверу", "bot");
+            }
+        } catch (e) {
+            appendMessage("⚠ Ошибка запроса: " + e.message, "bot");
+        }
+    };
+
+    emailInputRow.appendChild(emailInput);
+    emailInputRow.appendChild(checkEmailButton);
+
+    // ⬇️ ВСТАВЛЯЕМ ВОТ ЗДЕСЬ
+    chatContainer.insertBefore(emailInputRow, chatContainer.firstChild);
     chatContainer.insertBefore(newButton, chatContainer.firstChild);
 
     // Кнопка "Отправить заявку в бухгалтерию"

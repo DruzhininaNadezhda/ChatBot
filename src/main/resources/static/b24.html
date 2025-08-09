@@ -1,0 +1,27 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Запуск чата…</title>
+<script src="https://api.bitrix24.com/api/v1/"></script>
+<script>
+  (function () {
+    const applicationId = (Math.random().toString(36).slice(2) + Date.now());
+    BX24.init(async function () {
+      try {
+        const auth = BX24.getAuth(); // {access_token, domain, ...}
+        const resp = await fetch('/api/b24/mint', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ accessToken: auth.access_token, domain: auth.domain })
+        });
+        if (!resp.ok) { document.body.textContent = 'Не удалось авторизоваться через Битрикс24'; return; }
+        const { token } = await resp.json();
+        if (!token) { document.body.textContent = 'Токен не получен'; return; }
+
+        //location.href = `/b24/start?applicationId=${encodeURIComponent(applicationId)}&b24=${encodeURIComponent(token)}`;
+          location.href = `/index.html?b24=${encodeURIComponent(token)}`;
+      } catch (e) {
+        document.body.textContent = 'Ошибка: ' + (e?.message || e);
+      }
+    });
+  })();
+</script>
