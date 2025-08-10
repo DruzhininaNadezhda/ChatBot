@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Чат с загрузкой файлов</title>
     <style>
         body {
@@ -27,6 +27,26 @@
             overflow: hidden;
         }
 
+        /* Верхняя панель с кнопками */
+        #top-toolbar {
+            display: flex;
+            justify-content: flex-start;
+            gap: 8px;
+            padding: 8px 10px;
+            border-bottom: 1px solid #ddd;
+            background: #fff;
+            z-index: 1;
+        }
+        .btn-compact {
+            font-size: 14px;
+            padding: 6px 12px !important;
+            border-radius: 14px !important;
+            white-space: nowrap;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+        }
+
         #messages {
             flex: 1;
             overflow-y: auto;
@@ -40,7 +60,6 @@
             border-radius: 10px;
             word-wrap: break-word;
         }
-
         .user {
             align-self: flex-end;
             background: #007bff;
@@ -49,7 +68,6 @@
             margin-left: auto;
             margin-right: 0;
         }
-
         .bot {
             align-self: flex-start;
             background: #f1f1f1;
@@ -62,16 +80,16 @@
         #input-form {
             display: flex;
             flex-direction: column;
-            padding: 15px;
+            padding: 10px 15px 15px;
             border-top: 1px solid #ddd;
+            gap: 8px;
         }
         .input-row {
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 10px;
+            margin-bottom: 4px;
         }
-
         .input-row input[type="text"] {
             flex: 1;
             padding: 10px 15px;
@@ -79,7 +97,6 @@
             border: 1px solid #ccc;
             outline: none;
         }
-
         .input-row button {
             padding: 10px 20px;
             border: none;
@@ -89,31 +106,76 @@
             cursor: pointer;
             white-space: nowrap;
         }
-
-        .input-row button:hover {
-            background: #0056b3;
-        }
+        .input-row button:hover { background: #0056b3; }
 
         #user-input, #file-input {
             padding: 10px;
             border-radius: 20px;
             border: 1px solid #ccc;
             outline: none;
-            margin-bottom: 10px;
         }
 
-        button {
-            padding: 10px 20px;
+        /*!* Выберите файл — кнопка на всю ширину, само поле узкое *!*/
+        /*#file-input.narrow-file {*/
+        /*    display: block;*/
+        /*    width: 100%;         !* контейнер на всю ширину *!*/
+        /*}*/
+
+        /*#file-input.narrow-file::-webkit-file-upload-button {*/
+        /*    width: auto;         !* сама кнопка узкая *!*/
+        /*    padding: 6px 12px;*/
+        /*}*/
+
+        /*#file-input.narrow-file::file-selector-button {*/
+        /*    width: auto;*/
+        /*    padding: 6px 12px;*/
+        /*}*/
+        /* Контейнер выбора файла — на всю ширину */
+        #file-input.narrow-file {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 6px 10px; /* чуть меньше, чтобы не было громоздко */
+        }
+
+        /* Сама кнопка выбора файла — узкая */
+        #file-input.narrow-file::-webkit-file-upload-button {
+            padding: 6px 12px;
+            width: auto;
+            background: #e9ecef;
             border: none;
-            background: #007bff;
-            color: white;
-            border-radius: 20px;
+            border-radius: 14px;
             cursor: pointer;
+            margin-right: 8px; /* отступ от названия файла */
         }
 
-        button:hover {
-            background: #0056b3;
+        #file-input.narrow-file::file-selector-button {
+            padding: 6px 12px;
+            width: auto;
+            background: #e9ecef;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            margin-right: 8px;
         }
+
+        /* На мобильных — уменьшить шрифт и отступы */
+        @media (max-width: 768px) {
+            #file-input.narrow-file {
+                font-size: 13px;
+                padding: 4px 8px;
+            }
+            #file-input.narrow-file::-webkit-file-upload-button,
+            #file-input.narrow-file::file-selector-button {
+                font-size: 13px;
+                padding: 4px 8px;
+            }
+        }
+
+
+        button { cursor: pointer; }
+        button:hover { opacity: .95; }
+
         @media (max-width: 768px) {
             #chat-container {
                 width: 100vw;
@@ -122,43 +184,82 @@
                 border-radius: 0;
                 box-shadow: none;
             }
+            #messages { padding: 10px; }
+            #input-form { padding: 10px; }
+            #user-input { font-size: 18px; padding: 12px; }
+            #file-input { font-size: 16px; }
+            button, #send-button { font-size: 16px; padding: 8px 12px; }
+        }
+        /* === Ширины и пропорции кнопок === */
+        #top-toolbar {
+            display: flex;
+            gap: 8px;
+            padding: 8px 10px;
+            border-bottom: 1px solid #ddd;
+            background: #fff;
+        }
+        #btn-new {
+            flex: 2 1 0;         /* Новая заявка = 2/3 */
+        }
+        #btn-checkmail {
+            flex: 1 1 0;         /* Проверить почту = 1/3 */
+        }
 
-            #messages {
-                padding: 10px;
+        /* Кнопка "Отправить заявку в бухгалтерию" — на всю ширину чата */
+        #btn-send {
+            width: 100%;
+            justify-content: center;
+        }
+
+        /* Доп. компактность */
+        .btn-compact {
+            font-size: 14px;
+            padding: 6px 12px !important;
+            border-radius: 14px !important;
+            white-space: nowrap;
+        }
+
+        /* === Мобильная адаптация === */
+        @media (max-width: 768px) {
+            #top-toolbar { gap: 6px; padding: 6px 8px; }
+            .btn-compact { font-size: 13px; padding: 5px 10px !important; }
+            #btn-send { font-size: 14px; padding: 8px 12px !important; }
+            #file-input.narrow-file { max-width: 220px; }
+        }
+        /* На мобильных — уменьшить шрифт и отступы */
+        @media (max-width: 768px) {
+            #file-input.narrow-file {
+                font-size: 13px;
+                padding: 4px 8px;
             }
-
-            #input-form {
-                padding: 10px;
-            }
-
-            #user-input {
-                font-size: 18px;
-                padding: 12px;
-            }
-
-            #file-input {
-                font-size: 16px;
-            }
-
-            button, #send-button {
-                font-size: 22px;
-                padding: 12px 18px;
+            #file-input.narrow-file::-webkit-file-upload-button,
+            #file-input.narrow-file::file-selector-button {
+                font-size: 13px;
+                padding: 4px 8px;
             }
         }
     </style>
 </head>
-
 <body>
 
 <div id="chat-container">
+    <!-- ВЕРХНЯЯ ПАНЕЛЬ -->
+    <div id="top-toolbar">
+        <button id="btn-new" class="btn-compact" style="background:#ff5900;">Новая заявка</button>
+        <button id="btn-checkmail" class="btn-compact" style="background:#0cab5e;">Проверить почту</button>
+    </div>
+
     <div id="messages"></div>
 
     <form id="input-form" enctype="multipart/form-data">
         <div class="input-row">
             <input type="text" id="user-input" placeholder="Напиши что-нибудь..." />
-            <button type="submit">Ответить</button>
+            <button type="submit" class="btn-compact">Ответить</button>
         </div>
-        <input type="file" id="file-input" />
+        <input type="file" id="file-input" class="narrow-file" />
+        <button id="btn-send" type="button" class="btn-compact" style="align-self:flex-end;background:#007bff;">
+            Отправить заявку в бухгалтерию
+        </button>
     </form>
 </div>
 
@@ -167,64 +268,40 @@
     const urlParams = new URLSearchParams(location.search);
     let b24Token = urlParams.get('b24'); // если пришли из Битрикса, тут будет короткий JWT
     // === /B24 AUTO START ===
+
     const form = document.getElementById('input-form');
     const input = document.getElementById('user-input');
     const fileInput = document.getElementById('file-input');
     const messages = document.getElementById('messages');
 
+    const newButton = document.getElementById('btn-new');
+    const checkMailButton = document.getElementById('btn-checkmail');
+    const sendButton = document.getElementById('btn-send');
+
     let chatId = localStorage.getItem("chatId");
-    if (!chatId) {
-        chatId = crypto.randomUUID();
-        localStorage.setItem("chatId", chatId);
-    }
+    if (!chatId) { chatId = crypto.randomUUID(); localStorage.setItem("chatId", chatId); }
 
-    let applicationId = null;
+    let applicationId = localStorage.getItem("applicationId") || null;
+    let awaitingUsername = false;
 
-    // Кнопка "Новая заявка"
-    const newButton = document.createElement("button");
-    newButton.textContent = "Новая заявка (удаляет текущую)";
-    newButton.type = "button";
-    newButton.style.margin = "0 auto 8px";
-    newButton.style.display = "block";
-    newButton.style.padding = "10px 20px";
-    newButton.style.border = "none";
-    newButton.style.background = "#ff5900";
-    newButton.style.color = "white";
-    newButton.style.borderRadius = "20px";
-    newButton.style.cursor = "pointer";
-
+    // "Новая заявка"
     newButton.onclick = async () => {
-        // создаём новый applicationId (чистый DTO)
         applicationId = crypto.randomUUID();
         localStorage.setItem("applicationId", applicationId);
 
         appendMessage("🆕 Новая заявка создана: " + applicationId, "bot");
 
-        // если мы пришли из Битрикса — сразу заполняем DTO на бэке
         if (b24Token) {
             try {
-                const r = await fetch("/b24/new?" + new URLSearchParams({
-                    applicationId, b24: b24Token
-                }), { method: "POST" });
-
+                const r = await fetch("/b24/new?" + new URLSearchParams({ applicationId, b24: b24Token }), { method: "POST" });
                 if (r.ok) {
-                    // показываем дружелюбное подтверждение
-                    // подтянем свежие данные, чтобы отобразить имя и почту
                     const head = await (await fetch('/dto-head?applicationId=' + encodeURIComponent(applicationId))).json();
                     const name = (head.username || "—").trim();
                     const mail = (head.userEmail || "—").trim();
                     appendMessage(`Привет! Похоже, вы ${name}, а ваша почта — ${mail}.`, "bot");
-                    awaitingUsername = !name; // если имени нет — всё ещё попросим его дальше
-                    // уберём токен из адресной строки, чтобы не повторялось при перезагрузке
+                    awaitingUsername = !name;
                     history.replaceState(null, "", location.pathname);
                     b24Token = null;
-                    // appendMessage("Теперь, укажите в удобно формате (можно просто через запятую без слов уточнений):<br>" +
-                    //     "– Получателя (наименование поставщика и ИНН, если поставщик новый)<br>" +
-                    //     "– Статью ДДС<br>" +
-                    //     "– Контактное лицо (имя, телефон, почта)<br>" +
-                    //     "– Дату платежа<br>" +
-                    //     "– Дату поступления (при предоплате или услугах)<br>" +
-                    //     "– Приложите файл", "bot");
                 } else {
                     appendMessage("⚠ Не удалось подтянуть данные из Битрикс. Введите имя вручную.", "bot");
                     appendMessage("Пожалуйста, введите вашу фамилию и имя:", "bot");
@@ -236,7 +313,6 @@
                 awaitingUsername = true;
             }
         } else {
-            // обычный сценарий (прямая ссылка без Битрикса)
             appendMessage("Пожалуйста, введите вашу фамилию и имя:", "bot");
             awaitingUsername = true;
         }
@@ -244,69 +320,9 @@
         updateSendButtonState();
     };
 
-    const chatContainer = document.getElementById("chat-container");
-    // // 📧 Поле ввода email для проверки входящих
-    // const emailInputRow = document.createElement("div");
-    // emailInputRow.className = "input-row";
-    // emailInputRow.style.margin = "10px";
-    //
-    // const emailInput = document.createElement("input");
-    // emailInput.type = "text";
-    // emailInput.placeholder = "Введите email для проверки входящих";
-    // emailInput.id = "check-email-input";
-    // emailInput.style.flex = "1";
-    // emailInput.style.padding = "10px";
-    // emailInput.style.borderRadius = "20px";
-    // emailInput.style.border = "1px solid #ccc";
-    //
-    // const checkEmailButton = document.createElement("button");
-    // checkEmailButton.textContent = "Проверить почту";
-    // checkEmailButton.type = "button";
-    // checkEmailButton.style.whiteSpace = "nowrap";
-    //
-    // checkEmailButton.onclick = async () => {
-    //     const emailToCheck = emailInput.value.trim();
-    //     if (!emailToCheck) {
-    //         appendMessage("⚠ Введите email отправителя", "bot");
-    //         return;
-    //     }
-    //
-    //     try {
-    //         const res = await fetch("/check-inbox?" + new URLSearchParams({
-    //             senderEmail: emailToCheck
-    //         }), {
-    //             method: "POST"
-    //         });
-    //
-    //         if (res.ok) {
-    //             appendMessage("🔎 Поиск писем от " + emailToCheck + " запущен. Смотри консоль сервера.", "bot");
-    //         } else {
-    //             appendMessage("⚠ Ошибка при обращении к серверу", "bot");
-    //         }
-    //     } catch (e) {
-    //         appendMessage("⚠ Ошибка запроса: " + e.message, "bot");
-    //     }
-    // };
-    //
-    // emailInputRow.appendChild(emailInput);
-    // emailInputRow.appendChild(checkEmailButton);
-    const checkMailButton = document.createElement("button");
-    checkMailButton.textContent = "Проверить почту";
-    checkMailButton.type = "button";
-    checkMailButton.style.margin = "0 auto 8px";
-    checkMailButton.style.display = "block";
-    checkMailButton.style.padding = "10px 20px";
-    checkMailButton.style.border = "none";
-    checkMailButton.style.background = "#0cab5e";
-    checkMailButton.style.color = "white";
-    checkMailButton.style.borderRadius = "20px";
-    checkMailButton.style.cursor = "pointer";
-
+    // "Проверить почту"
     checkMailButton.onclick = async () => {
-        if (!applicationId) {
-            appendMessage("❗ Сначала нажмите 'Новая заявка'", "bot");
-            return;
-        }
+        if (!applicationId) { appendMessage("❗ Сначала нажмите 'Новая заявка'", "bot"); return; }
         try {
             const res = await fetch("/mail/check", {
                 method: "POST",
@@ -317,9 +333,6 @@
 
             appendMessage(data.message, "bot");
             if (data.attachment) renderAttachment(data.attachment);
-            if (data.attachment && data.attachment.originalFileName) {
-                appendMessage("📎 Найдён файл: " + data.attachment.originalFileName, "bot");
-            }
 
             await showDtoSummary();
             updateSendButtonState();
@@ -328,33 +341,13 @@
         }
     };
 
-    chatContainer.insertBefore(checkMailButton, chatContainer.firstChild);
-    chatContainer.insertBefore(newButton, chatContainer.firstChild);
-
-
-    // Кнопка "Отправить заявку в бухгалтерию"
-    const sendButton = document.createElement("button");
-    sendButton.textContent = "Отправить заявку в бухгалтерию";
-    sendButton.type = "button";
-    sendButton.disabled = true;
-    sendButton.style.marginTop = "10px";
-    sendButton.style.padding = "10px 20px";
-    sendButton.style.border = "none";
-    sendButton.style.background = "#007bff";
-    sendButton.style.color = "white";
-    sendButton.style.borderRadius = "20px";
-    sendButton.style.cursor = "pointer";
-
+    // Отправить в бухгалтерию
     sendButton.onclick = async () => {
         const res = await fetch("/finalize", {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: new URLSearchParams({
-                chatId: chatId,
-                applicationId: applicationId
-            })
+            body: new URLSearchParams({ chatId, applicationId })
         });
-
         if (res.ok) {
             appendMessage("✅ Заявка успешно отправлена в бухгалтерию", "bot");
             applicationId = null;
@@ -365,19 +358,14 @@
         }
     };
 
-    form.append(sendButton);
-
+    // Отправка сообщений/файла
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
         const userText = input.value.trim();
         const file = fileInput.files[0];
 
-        if (!applicationId) {
-            appendMessage("❗ Сначала нажмите 'Новая заявка'", "bot");
-            return;
-        }
-
+        if (!applicationId) { appendMessage("❗ Сначала нажмите 'Новая заявка'", "bot"); return; }
         if (!userText && !file) return;
 
         if (userText) appendMessage(userText, 'user');
@@ -385,7 +373,6 @@
 
         let usernameJustSet = false;
 
-        // 🔹 Сначала — если нужно имя
         if (awaitingUsername && userText) {
             awaitingUsername = false;
             usernameJustSet = true;
@@ -393,10 +380,7 @@
             await fetch("/set-username", {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: new URLSearchParams({
-                    applicationId: applicationId,
-                    username: userText
-                })
+                body: new URLSearchParams({ applicationId, username: userText })
             });
 
             appendMessage("Имя сохранено!", "bot");
@@ -411,7 +395,6 @@
             updateSendButtonState();
         }
 
-        // 🔹 Далее — всегда отправляем заявку, если есть файл ИЛИ текст (и имя уже введено)
         const isComment = userText.startsWith("#Комментарий:");
         if (file || (!usernameJustSet && userText)) {
             const formData = new FormData();
@@ -419,18 +402,13 @@
             formData.append("applicationId", applicationId);
 
             if (isComment) {
-                // если это комментарий, не отправляем в GigaChat, только сохраняем
                 await fetch("/add-comment", {
                     method: "POST",
                     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                    body: new URLSearchParams({
-                        applicationId: applicationId,
-                        comment: userText
-                    })
+                    body: new URLSearchParams({ applicationId, comment: userText })
                 });
-
                 appendMessage("💬 Комментарий добавлен в заявку", "bot");
-                formData.append("message", ""); // не отправляем в ИИ
+                formData.append("message", "");
             } else {
                 formData.append("message", (!usernameJustSet ? userText : ""));
             }
@@ -438,10 +416,7 @@
             if (file) formData.append("file", file);
 
             try {
-                const res = await fetch("/process", {
-                    method: "POST",
-                    body: formData
-                });
+                const res = await fetch("/process", { method: "POST", body: formData });
 
                 if (res.status === 413) {
                     appendMessage("⚠ Файл слишком большой. Максимально допустимый размер — 20MB.", "bot");
@@ -449,7 +424,6 @@
                 }
 
                 const replyText = await res.text();
-
                 if (replyText && replyText.includes("Введите ваше имя")) {
                     appendMessage("Пожалуйста, введите ваше имя:", "bot");
                     awaitingUsername = true;
@@ -457,7 +431,6 @@
 
                 await showDtoSummary();
                 updateSendButtonState();
-
             } catch (error) {
                 appendMessage("⚠ Ошибка при отправке запроса", 'bot');
                 console.error(error);
@@ -478,20 +451,11 @@
 
     async function showDtoSummary() {
         if (!applicationId) return;
-
         try {
-            const res = await fetch("/get-dto?" + new URLSearchParams({
-                chatId: chatId,
-                applicationId: applicationId
-            }));
-
-            if (!res.ok) {
-                appendMessage("⚠ Не удалось получить данные заявки", "bot");
-                return;
-            }
+            const res = await fetch("/get-dto?" + new URLSearchParams({ chatId, applicationId }));
+            if (!res.ok) { appendMessage("⚠ Не удалось получить данные заявки", "bot"); return; }
 
             const dto = await res.json();
-
             const fields = [
                 ["Получатель", dto["receiver"] || dto["получатель"]],
                 ["Статья ДДС", dto["dds"] || dto["статья_ддс"]],
@@ -500,8 +464,7 @@
                 ["Файл", dto["file"] || dto["файл"]],
                 ["Дата поступления", dto["deliveryDate"] || dto["дата_поступления"]]
             ];
-
-            const lines = fields.map(([label, value]) => `${label}: ${value?.trim() || "—"}`);
+            const lines = fields.map(([label, value]) => `${label}: ${value?.toString().trim?.() ? value.trim() : "—"}`);
             appendMessage(lines.join("<br>"), "bot");
 
             const missing = fields.slice(0, 5)
